@@ -36,29 +36,11 @@ spinner() {
     printf "    \b\b\b\b"
 }
 
-# Remove PHP version for clean installation
-remove_php() {
-  echo -e "${green}Checking if PHP is installed using paru...${reset}"
-  
-  # Check if PHP is installed and remove it if necessary
-  if ! command -v php"$php_version_formatted" &>/dev/null; then
-    echo -e "${green}PHP not installed, no need to remove it.${reset}"
-  else 
-    echo -e "${green}Removing previously installed PHP...${reset}"
-    paru -Rns php"$php_version_formatted" --noconfirm
-  fi
-  
-  echo -e "${green}PHP removed successfully.${reset}"
-}
-
-remove_dependencies() {
-  echo -e "${green}Checking if still have PHP dependencies installed using paru...${reset}"
- 
-  # Clean up unused dependencies
-  echo -e "${green}Cleaning up unused PHP dependencies starting with php$php_version_formatted-...${reset}"
+# Clean up php and unused dependencies
+remove_php_and_dependencies() {
+  echo -e "${green}Trying to remove previous php$php_version_formatted installations and its dependencies...${reset}"
   paru -Qsq "^php$php_version_formatted-" | paru -Rns -
-  
-  echo -e "${green}PHP dependencies removed successfully.${reset}"
+  echo -e "${green}PHP and dependencies removed successfully.${reset}"
 }
 
 # Function to check and install PHP versions using paru
@@ -79,9 +61,8 @@ install_php() {
   fi
 }
 
-
+# Check if php-pgsql extension is installed
 install_php_pgsql() {
-  # Check if php-pgsql extension is installed
   if ! php -m | grep -q '^pgsql$'; then
     echo -e "${red}php-pgsql extension is not installed.${reset}"
     sleep 1
@@ -101,11 +82,6 @@ install_php_pgsql() {
 
 # Function to activate PHP version
 activate_php() {
-  local php_version="$1"
-
-  # Adjust PHP version format if necessary (e.g., 72 instead of 7.2)
-  local php_version_formatted="${php_version:0:1}${php_version:2:1}"
-
   echo -e "${green}Activating php $php_version_formatted at location /usr/bin/php$php_version_formatted ...${reset}"
   rm -f "$HOME/bin/php" "$HOME/bin/phpize"
   ln -sf "/usr/bin/php$php_version_formatted" "$HOME/bin/php"
@@ -118,40 +94,16 @@ activate_php() {
   # Check if the symbolic links were created successfully
   if [ $? -eq 0 ]; then
     echo "PHP $php_version_formatted activated successfully."
-    /usr/bin/php -v  # Use the absolute path to php executable
+    php -v  # Use the absolute path to php executable
   else
     echo -e "${red}Error creating symbolic links.${reset}"
   fi
 }
 
-
-
-
-#spinner $$ &
-#spinner $spinner_pid1 &
-remove_php "$1"
-#kill $spinner_pid1 > /dev/null 2>&1
-
-#spinner $$ &
-#spinner $spinner_pid1 &
-remove_dependencies "$1"
-#kill $spinner_pid1 > /dev/null 2>&1
-
-#spinner $$ &
-#spinner $spinner_pid1 &
+remove_php_and_dependencies "$1"
 install_php "$1"
-#kill $spinner_pid1 > /dev/null 2>&1
-
-#spinner $$ &
-#spinner $spinner_pid1 &
 install_php_pgsql "$1"
-#kill $spinner_pid1 > /dev/null 2>&1
-
-#spinner $$ &
-#spinner $spinner_pid1 &
-activate_php "$1"
-#kill $spinner_pid1 > /dev/null 2>&1
-
+#activate_php "$1"
 echo -e "Operation completed."
 
 # Additional information
@@ -159,4 +111,3 @@ echo -e "Operation completed."
 lsb_release -cd
 getconf LONG_BIT
 lsb_release -a
-paru -Qi "php$1" "php$1-pgsql"  # Check PHP and php-pgsql package information using paru
